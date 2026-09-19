@@ -1,0 +1,15 @@
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+.env
+dist/
+build/
+uploads/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+coverage/
+.pytest_cache/

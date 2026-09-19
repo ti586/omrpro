@@ -1,0 +1,40 @@
+{
+  "name": "omrpro-api",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev":     "nodemon src/server.js",
+    "start":   "node src/server.js",
+    "worker":  "node src/workers/index.js",
+    "migrate": "node src/db/migrate.js",
+    "seed":    "node src/db/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs":           "^2.4.3",
+    "bullmq":             "^5.0.0",
+    "cors":               "^2.8.5",
+    "dotenv":             "^16.0.0",
+    "express":            "^4.18.0",
+    "express-rate-limit": "^7.0.0",
+    "express-validator":  "^7.0.0",
+    "form-data":          "^4.0.0",
+    "helmet":             "^7.0.0",
+    "ioredis":            "^5.0.0",
+    "jsonwebtoken":       "^9.0.0",
+    "morgan":             "^1.10.0",
+    "multer":             "^1.4.5-lts.1",
+    "nodemailer":         "^6.0.0",
+    "pg":                 "^8.11.0",
+    "pino":               "^8.0.0",
+    "pino-pretty":        "^10.0.0",
+    "pdfkit":             "^0.14.0",
+    "qrcode":             "^1.5.0",
+    "sharp":              "^0.33.0",
+    "socket.io":          "^4.7.0",
+    "uuid":               "^9.0.0",
+    "xlsx":               "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  }
+}

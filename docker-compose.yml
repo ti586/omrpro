@@ -1,0 +1,145 @@
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: omrpro_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       omrpro
+      POSTGRES_USER:     omrpro_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omrpro123local}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U omrpro_user -d omrpro"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - omrpro_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: omrpro_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - omrpro_net
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: omrpro_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV:        development
+      PORT:            4000
+      DATABASE_URL:    postgresql://omrpro_user:${POSTGRES_PASSWORD:-omrpro123local}@postgres:5432/omrpro
+      REDIS_URL:       redis://redis:6379
+      JWT_SECRET:      ${JWT_SECRET:-omrpro_chave_secreta_local_muito_longa_para_testes_2025_xyzabc123}
+      JWT_EXPIRES_IN:  7d
+      UPLOAD_DIR:      /app/uploads
+      OMR_SERVICE_URL: http://omr-service:5001
+      FRONTEND_URL:    http://localhost:3000
+      LOG_LEVEL:       info
+    volumes:
+      - ./backend:/app
+      - api_modules:/app/node_modules
+      - uploads_data:/app/uploads
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - omrpro_net
+
+  omr-service:
+    build:
+      context: ./omr-service
+      dockerfile: Dockerfile
+    container_name: omrpro_omr
+    restart: unless-stopped
+    environment:
+      PORT:       5001
+      REDIS_URL:  redis://redis:6379
+      UPLOAD_DIR: /app/uploads
+      LOG_LEVEL:  INFO
+    volumes:
+      - uploads_data:/app/uploads
+      - ./omr-service/src:/app/src
+    ports:
+      - "5001:5001"
+    depends_on:
+      - redis
+    networks:
+      - omrpro_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: omrpro_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:4000/api/v1
+      VITE_WS_URL:  ws://localhost:4000
+    volumes:
+      - ./frontend:/app
+      - frontend_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - omrpro_net
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: omrpro_worker
+    restart: unless-stopped
+    command: node src/workers/index.js
+    environment:
+      NODE_ENV:        development
+      DATABASE_URL:    postgresql://omrpro_user:${POSTGRES_PASSWORD:-omrpro123local}@postgres:5432/omrpro
+      REDIS_URL:       redis://redis:6379
+      OMR_SERVICE_URL: http://omr-service:5001
+      UPLOAD_DIR:      /app/uploads
+      LOG_LEVEL:       info
+    volumes:
+      - ./backend:/app
+      - api_modules:/app/node_modules
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - omrpro_net
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
+  api_modules:
+  frontend_modules:
+
+networks:
+  omrpro_net:
+    driver: bridge
